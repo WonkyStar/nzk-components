@@ -73,7 +73,7 @@
     "standard": "standard --verbose | snazzy",
     "standard-fix": "standard --fix | snazzy",
     "format": "prettier-standard '**/*.js' | standard --fix | snazzy",
-    "storybook": "start-storybook -p 6006 -s ./src/static",
+    "storybook": "start-storybook -p 6007 -s ./src/static",
     "build-storybook": "build-storybook",
     "translations": "node ./tools/translationRunner.js"
   },
