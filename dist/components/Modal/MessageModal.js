@@ -58,6 +58,8 @@ var MessageModal = function (_Component) {
     _this.state = {
       open: _this.props.isOpen
     };
+
+    _this.onButtonClick = _this.onButtonClick.bind(_this);
     return _this;
   }
 
@@ -86,9 +88,9 @@ var MessageModal = function (_Component) {
       if (this.props.buttons[index].onClick) {
         this.props.buttons[index].onClick();
       } else {
-        this.state = {
+        this.setState({
           open: false
-        };
+        });
       }
     }
   }, {
@@ -103,7 +105,8 @@ var MessageModal = function (_Component) {
           delayCloseTimeoutMS: this.props.delayCloseTimeoutMS,
           overlayColor: 'transparent',
           onAfterClose: this.onAfterClose.bind(this),
-          contentLabel: this.props.contentLabel
+          contentLabel: this.props.contentLabel,
+          ariaHideApp: false
         },
         _react2.default.createElement(
           'div',

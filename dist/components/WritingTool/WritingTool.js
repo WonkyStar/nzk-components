@@ -319,6 +319,18 @@ var WritingTool = (_dec = (0, _reactGsapEnhancer2.default)(), _dec(_class = func
               id: 'writingToolAskForTitle',
               defaultMessage: 'Please add a title'
             }),
+            /*buttons: [
+              { 
+                label: 'OK', 
+                shadow: true, 
+                size: 'large',
+                onClick: () => {
+                  this.setState({
+                    messageModalIsOpen: false
+                  })
+                }
+              }
+            ],*/
             onAfterClose: function onAfterClose() {
               _this3.setState({
                 messageModalIsOpen: false
