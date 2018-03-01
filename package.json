@@ -39,6 +39,7 @@
     "color": "^3.0.0",
     "gsap": "^1.20.4",
     "husky": "^0.14.3",
+    "immutable": "^3.8.2",
     "jest": "^22.4.0",
     "lodash": "^4.17.5",
     "node-vibrant": "^3.0.0",
@@ -58,14 +59,13 @@
     "redux-thunk": "^2.2.0",
     "remote-redux-devtools": "^0.5.12",
     "rimraf": "^2.6.2",
-    "slate": "^0.32.4",
-    "snazzy": "^7.0.0",
-    "standard": "^11.0.0",
-    "styled-jsx": "^2.2.5",
-    "immutable": "^3.8.2",
+    "slate": "^0.32.5",
     "slate-html-serializer": "^0.5.4",
     "slate-plain-serializer": "^0.5.4",
-    "slate-react": "^0.11.4"
+    "slate-react": "^0.11.6",
+    "snazzy": "^7.0.0",
+    "standard": "^11.0.0",
+    "styled-jsx": "^2.2.5"
   },
   "scripts": {
     "build": "rimraf dist/ && babel src --ignore 'storyshot**,**stories.js' --out-dir dist/ --copy-files",
@@ -91,5 +91,8 @@
     ]
   },
   "author": "Night Zookeeper",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "is-hotkey": "^0.1.1"
+  }
 }

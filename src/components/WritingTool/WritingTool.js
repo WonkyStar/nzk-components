@@ -314,6 +314,18 @@ export default class WritingTool extends Component {
               defaultMessage='Please add a title'
             />
           ),
+          /*buttons: [
+            { 
+              label: 'OK', 
+              shadow: true, 
+              size: 'large',
+              onClick: () => {
+                this.setState({
+                  messageModalIsOpen: false
+                })
+              }
+            }
+          ],*/
           onAfterClose: () => {
             this.setState({
               messageModalIsOpen: false

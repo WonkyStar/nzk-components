@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { Block } from 'slate'
+import { Block, Change } from 'slate'
 import { Editor } from 'slate-react'
 import Html from 'slate-html-serializer'
 import Plain from 'slate-plain-serializer'
@@ -9,6 +9,7 @@ import { connect } from 'react-redux'
 import { TimelineMax } from 'gsap'
 import { FormattedMessage } from 'react-intl'
 import debounce from 'lodash/debounce'
+import { isKeyHotkey } from 'is-hotkey'
 import words from 'lodash/words'
 import { setWordCount, setWriting } from '../../store/actions'
 import Modal from '../../../Modal'
@@ -23,11 +24,21 @@ import styles from './Writer.styles'
 const DEFAULT_NODE = 'paragraph'
 
 const defaultBlock = {
-  kind: 'block',
+  object: 'block',
   type: 'paragraph',
   isVoid: false,
   data: {}
 }
+
+/**
+ * Define hotkey matchers.
+ *
+ * @type {Function}
+ */
+
+const isBoldHotkey = isKeyHotkey('mod+b')
+const isItalicHotkey = isKeyHotkey('mod+i')
+const isUnderlineHotkey = isKeyHotkey('mod+u')
 
 /**
  * Define a schema.
@@ -35,7 +46,7 @@ const defaultBlock = {
  * @type {Object}
  */
 const schema = {
-  nodes: {
+  blocks: {
     image: props => {
       const { node } = props
       const src = node.data.get('src')
@@ -85,23 +96,17 @@ const schema = {
       </p>
     )
   },
-  rules: [
-    // Rule to insert a paragraph below a void node (the image) if that node is
-    // the last one in the document.
-    {
-      match: node => {
+  match: node => {
         return node.kind === 'document'
-      },
-      validate: document => {
-        const lastNode = document.nodes.last()
-        return lastNode && lastNode.isVoid ? true : null
-      },
-      normalize: (transform, document) => {
-        const block = Block.create(defaultBlock)
-        transform.insertNodeByKey(document.key, document.nodes.size, block)
-      }
-    }
-  ],
+  },
+  validate: document => {
+    const lastNode = document.nodes.last()
+    return lastNode && lastNode.isVoid ? true : null
+  },
+  normalize: (transform, document) => {
+    const block = Block.create(defaultBlock)
+    transform.insertNodeByKey(document.key, document.nodes.size, block)
+  },
   marks: {
     bold: {
       fontWeight: 'bold'
@@ -153,16 +158,16 @@ const rules = [
       }
 
       return {
-        kind: 'block',
+        object: 'block',
         type: type,
         nodes: next(el.childNodes),
         data: data
       }
     },
-    serialize (object, children) {
-      if (object.kind !== 'block') return
+    serialize (obj, children) {
+      if (obj.object !== 'block') return
 
-      switch (object.type) {
+      switch (obj.type) {
         case 'paragraph':
           return <p>{children}</p>
         case 'align-left':
@@ -174,7 +179,7 @@ const rules = [
         case 'image':
           return (
             <img
-              src={object.data.get('src')}
+              src={obj.data.get('src')}
               className='importedImage'
               alt=''
               style={{
@@ -196,16 +201,16 @@ const rules = [
       const type = MARK_TAGS[el.tagName.toLowerCase()]
       if (!type) return
       return {
-        kind: 'mark',
+        object: 'mark',
         type: type,
         nodes: next(el.childNodes)
       }
     }
   },
   {
-    serialize (object, children) {
-      if (object.kind !== 'mark') return
-      switch (object.type) {
+    serialize (obj, children) {
+      if (obj.object !== 'mark') return
+      switch (obj.type) {
         case 'bold':
           return <strong>{children}</strong>
         case 'italic':
@@ -340,7 +345,7 @@ export default class Writer extends Component {
 
   hasMark = type => {
     const { writingState } = this.state
-    return writingState.marks.some(mark => mark.type === type)
+    return writingState.activeMarks.some(mark => mark.type === type)
   }
 
   /**
@@ -367,29 +372,29 @@ export default class Writer extends Component {
     this.addAnimation(this.resizeTitle)
   }
 
-  onStateChange = ({ state }) => {
-    if (state.document !== this.state.writingState.document) {
-      this.updateWordCount(state)
-      this.onDebouncedDocumentChange(state)
+  onStateChange = ({ value }) => {
+    if (value.document !== this.state.writingState.document) {
+      this.updateWordCount(value)
+      this.onDebouncedDocumentChange(value)
     }
 
-    this.setState({ writingState: state })
+    this.setState({ writingState: value })
   }
 
-  onDebouncedDocumentChange = state => {
+  onDebouncedDocumentChange = value => {
     this.props.dispatch(
       setWriting({
-        text: html.serialize(state)
+        text: html.serialize(value)
       })
     )
   }
 
-  updateWordCount (state) {
-    this.props.dispatch(setWordCount(this.getWordCountForState(state)))
+  updateWordCount (value) {
+    this.props.dispatch(setWordCount(this.getWordCountForState(value)))
   }
 
-  getWordCountForState = state => {
-    const text = Plain.serialize(state)
+  getWordCountForState = value => {
+    const text = Plain.serialize(value)
 
     if (this.props.lang === 'jp') {
       return text.replace(/\s+/g, '').length
@@ -399,10 +404,35 @@ export default class Writer extends Component {
 
   focusEditor () {
     const writingState = this.state.writingState
-      .transform()
+      .change()
       .focus()
-      .apply()
-    this.setState({ writingState })
+    this.onStateChange(writingState)
+  }
+
+  /**
+   * On key down, if it's a formatting command toggle a mark.
+   *
+   * @param {Event} event
+   * @param {Change} change
+   * @return {Change}
+   */
+
+  onKeyDown = (event, change) => {
+    let mark
+
+    if (isBoldHotkey(event)) {
+      mark = 'bold'
+    } else if (isItalicHotkey(event)) {
+      mark = 'italic'
+    } else if (isUnderlineHotkey(event)) {
+      mark = 'underline'
+    } else {
+      return
+    }
+
+    event.preventDefault()
+    change.toggleMark(mark)
+    return true
   }
 
   /**
@@ -415,21 +445,19 @@ export default class Writer extends Component {
     e.preventDefault()
     let { writingState } = this.state
     writingState = writingState
-      .transform()
+      .change()
       .toggleMark(type)
-      .apply()
-    this.setState({ writingState })
+    this.onStateChange(writingState)
   }
 
-  insertImage = (state, src) => {
-    return state
-      .transform()
+  insertImage = (value, src) => {
+    return value
+      .change()
       .insertBlock({
         type: 'image',
         isVoid: true,
         data: { src }
       })
-      .apply()
   }
 
   /**
@@ -442,18 +470,75 @@ export default class Writer extends Component {
   onClickBlock = (e, type) => {
     e.preventDefault()
     let { writingState } = this.state
-    const transform = writingState.transform()
+    const change = writingState.change()
 
     if (type === 'image') {
       this.openImageUploaderModal()
     } else {
       const isActive = this.hasBlock(type)
-      transform.setBlock(isActive ? DEFAULT_NODE : type)
+      change.setBlock(isActive ? DEFAULT_NODE : type)
     }
 
-    writingState = transform.apply()
-    this.setState({ writingState })
+    this.onStateChange(change)
   }
+
+  /**
+   * Render a Slate mark.
+   *
+   * @param {Object} props
+   * @return {Element}
+   */
+
+  renderMark = props => {
+    const { children, mark } = props
+    switch (mark.type) {
+      case 'bold':
+        return <strong>{children}</strong>
+      case 'italic':
+        return <em>{children}</em>
+      case 'underline':
+        return <u>{children}</u>
+    }
+  }
+  
+  /**
+   * Render a Slate block.
+   *
+   * @param {Object} props
+   * @return {Element}
+   */
+
+  renderBlock = props => {
+    const { children, node } = props
+    switch (node.type) {
+      case 'paragraph':
+        return <p>{children}</p>
+      case 'align-left':
+        return <p style={{ textAlign: 'left' }}>{children}</p>
+      case 'align-center':
+        return <p style={{ textAlign: 'center' }}>{children}</p>
+      case 'align-right':
+        return <p style={{ textAlign: 'right' }}>{children}</p>
+      case 'image':
+        return (
+          <img
+            src={node.data.get('src')}
+            className='importedImage'
+            alt=''
+            style={{
+              maxWidth: '75%',
+              maxHeight: '400px',
+              display: 'block',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              marginTop: '20px',
+              marginBottom: '20px'
+            }}
+          />
+        )
+    }
+  }
+
 
   render = () => {
     const colorStyle = {
@@ -725,6 +810,7 @@ export default class Writer extends Component {
       <Modal
         contentLabel='image-uploader'
         isOpen={this.state.imageUploaderModalIsOpen}
+        ariaHideApp={false}
       >
         <div
           onClick={this.closeImageUploaderModal}
@@ -768,7 +854,6 @@ export default class Writer extends Component {
         dangerouslySetInnerHTML={{ __html: this.props.placeholders.text }}
       />
     )
-
     return (
       <div className='editor-wrapper'>
         <div
@@ -781,16 +866,18 @@ export default class Writer extends Component {
           name='editor'
         >
           <Editor
-            key='editor'
             spellCheck
             placeholder={placeholder}
             schema={schema}
             tabIndex={2}
             ref={this.slateEditorRef}
-            state={this.state.writingState}
             onFocus={this.onSlateEditorFocus.bind(this)}
             onBlur={this.onBlur.bind(this)}
             onChange={this.onStateChange}
+            onKeyDown={this.onKeyDown}
+            renderMark={this.renderMark}
+            renderNode={this.renderBlock}
+            value={this.state.writingState}
             style={{
               height: 'calc(100% - 40px)',
               paddingBottom: '100px'

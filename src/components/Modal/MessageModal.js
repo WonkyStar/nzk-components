@@ -25,6 +25,8 @@ export default class MessageModal extends Component {
     this.state = {
       open: this.props.isOpen
     }
+
+    this.onButtonClick = this.onButtonClick.bind(this)
   }
 
   componentWillReceiveProps (newProps) {
@@ -50,9 +52,9 @@ export default class MessageModal extends Component {
     if (this.props.buttons[index].onClick) {
       this.props.buttons[index].onClick()
     } else {
-      this.state = {
+      this.setState({
         open: false
-      }
+      })
     }
   }
 
@@ -64,6 +66,7 @@ export default class MessageModal extends Component {
         overlayColor='transparent'
         onAfterClose={this.onAfterClose.bind(this)}
         contentLabel={this.props.contentLabel}
+        ariaHideApp={false}
       >
         <div className={`host${this.state.open ? ' fadeIn' : ''}`}>
           <div className='modal'>
