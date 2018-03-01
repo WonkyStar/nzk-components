@@ -1,6 +1,6 @@
 {
   "name": "nzk-components",
-  "version": "2.0.0-alpha.2",
+  "version": "2.0.0-alpha.4",
   "peerDependencies": {
     "axios": "0.x",
     "classnames": "2.x",
